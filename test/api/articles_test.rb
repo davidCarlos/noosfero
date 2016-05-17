@@ -805,4 +805,36 @@ class ArticlesTest < ActiveSupport::TestCase
     json = JSON.parse(last_response.body)
     assert_includes json["article"]["permissions"], 'allow_post_content'
   end
+  should 'add categories by id in a article' do
+    category_1 = fast_create(Category, :environment_id => environment.id)
+    category_2 = fast_create(Category, :environment_id => environment.id)
+    article = fast_create(Article, :profile_id => person.id, :name => "Category tes
+													t")
+    get "/api/v1/articles/#{article.id}/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal json["article"]["categories"], []
+    params.merge!({article: {category_ids: "#{category_1.id},#{category_2.id}"}})
+    post "/api/v1/articles/#{article.id}/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_includes json["article"].keys, "categories"
+    assert_equal json["article"]["categories"].length, 2
+    assert_includes json["article"]["categories"][0].values, category_1.name
+    assert_includes json["article"]["categories"][1].values, category_2.name
+  end
+
+  should 'add categories by name in a article' do
+    category_1 = fast_create(Category, :environment_id => environment.id)
+    category_2 = fast_create(Category, :environment_id => environment.id)
+    article = fast_create(Article, :profile_id => person.id, :name => "Category test")
+    get "/api/v1/articles/#{article.id}/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_equal json["article"]["categories"], []
+    params.merge!({article: {category_ids: "#{category_1.name},#{category_2.name}"}})
+    post "/api/v1/articles/#{article.id}/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert_includes json["article"].keys, "categories"
+    assert_equal json["article"]["categories"].length, 2
+    assert_includes json["article"]["categories"][0].values, category_1.name
+    assert_includes json["article"]["categories"][1].values, category_2.name
+  end
 end

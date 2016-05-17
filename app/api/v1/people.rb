@@ -54,8 +54,11 @@ module Api
         post ':id' do
           authenticate!
           return forbidden! if current_person.id.to_s != params[:id]
-          current_person.update_attributes!(asset_with_image(params[:person]))
-          present current_person, :with => Entities::Person, :current_person => current_person
+          category_ids = params[:person].delete :category_ids
+          me = current_person
+          me = add_categories_to_asset(me, category_ids)
+          me.update_attributes!(asset_with_image(params[:person]))
+          present me, :with => Entities::Person, :current_person => me
         end
 
         #  POST api/v1/people?person[login]=some_login&person[password]=some_password&person[name]=Jack

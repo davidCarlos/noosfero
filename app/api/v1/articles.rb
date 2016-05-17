@@ -50,6 +50,8 @@ module Api
         post ':id' do
           article = environment.articles.find(params[:id])
           return forbidden! unless article.allow_edit?(current_person)
+          category_ids = params[:article].delete :category_ids
+          article = add_categories_to_asset(article, category_ids)
           article.update_attributes!(asset_with_image(params[:article]))
           present_partial article, :with => Entities::Article
         end

@@ -256,6 +256,58 @@ class Api::HelpersTest < ActiveSupport::TestCase
     assert asset_params[:image_builder][:uploaded_data].is_a? ActionDispatch::Http::UploadedFile
   end
 
+  should 'convert a list of ids as strings to an array of integers' do
+    login_api
+    categories_as_str = '31,32,30'
+    categories = categories_by_ids(categories_as_str)
+    assert_equal categories.length, 3
+    assert_includes categories, 31
+    assert_includes categories, 32
+    assert_includes categories, 30
+  end
+
+  should 'convert a list of category names to an array of integers' do
+    category_1 = fast_create(Category, :environment_id => 1)
+    category_2 = fast_create(Category, :environment_id => 1)
+    categories_as_str = "#{category_1.name},#{category_2.name}"
+    categories = categories_by_names(categories_as_str)
+    assert_equal categories.length, 2
+    assert_includes categories, category_1.id
+    assert_includes categories, category_2.id
+  end
+
+  should 'add named categories to asset' do
+    login_api
+    category_1 = fast_create(Category, :environment_id => 1)
+    category_2 = fast_create(Category, :environment_id => 1)
+    asset_1 = fast_create(Community)
+    asset_1.add_admin(person)
+    asset_1.save
+    asset_1.reload
+    categories_as_str = "#{category_1.name},#{category_2.name}"
+    asset_1 = add_categories_to_asset(asset_1, categories_as_str)
+
+    assert_equal asset_1.categories.count, 2
+    assert_equal asset_1.categories.first.name, category_1.name
+    assert_equal asset_1.categories.second.name, category_2.name
+  end
+
+  should 'add categories using id to asset' do
+    login_api
+    category_1 = fast_create(Category, :environment_id => 1)
+    category_2 = fast_create(Category, :environment_id => 1)
+    asset_2 = fast_create(Community)
+    asset_2.add_admin(person)
+    asset_2.save
+    asset_2.reload
+    categories_as_str = "#{category_1.id},#{category_2.id}"
+    asset_2 = add_categories_to_asset(asset_2, categories_as_str)
+
+    assert_equal asset_2.categories.count, 2
+    assert_equal asset_2.categories.first.name, category_1.name
+    assert_equal asset_2.categories.second.name, category_2.name
+  end
+
   protected
 
   def error!(info, status)

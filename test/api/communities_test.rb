@@ -333,4 +333,29 @@ class CommunitiesTest < ActiveSupport::TestCase
     refute json['community']['additional_data'].has_key?('Rating')
   end
 
+	should 'add categories by id to community' do
+		login_api
+		category_1 = fast_create(Category, :environment_id => environment.id)
+		category_2 = fast_create(Category, :environment_id => environment.id)
+		params[:community] = {:name => 'some', :category_ids => "#{category_1.id},#{category_2.id}"}
+		post "/api/v1/communities?#{params.to_query}"
+		json = JSON.parse(last_response.body)
+		assert json['community'].has_key?("categories")
+		assert_equal json["community"]["categories"].length, 2
+		assert_includes json["community"]["categories"][0].values, category_1.name
+		assert_includes json["community"]["categories"][1].values, category_2.name
+	end
+
+	should 'add categories by name ids to community' do
+		login_api
+		category_1 = fast_create(Category, :environment_id => environment.id)
+		category_2 = fast_create(Category, :environment_id => environment.id)
+		params[:community] = {:name => 'some', :category_ids => "#{category_1.name},#{category_2.name}"}
+		post "/api/v1/communities?#{params.to_query}"
+		json = JSON.parse(last_response.body)
+		assert json['community'].has_key?("categories")
+		assert_equal json["community"]["categories"].length, 2
+		assert_includes json["community"]["categories"][0].values, category_1.name
+		assert_includes json["community"]["categories"][1].values, category_2.name
+	end
 end

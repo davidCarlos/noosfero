@@ -133,6 +133,7 @@ module Api
         Entities.permissions_for_entity(profile, options[:current_person],
         :allow_post_content?, :allow_edit?, :allow_destroy?)
       end
+      expose :categories, :using => Category
     end
 
     class UserBasic < Entity
@@ -153,6 +154,7 @@ module Api
       expose :articles_count do |person, options|
         person.articles.count
       end
+      expose :categories, :using => Category
     end
 
     class Enterprise < Profile

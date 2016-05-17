@@ -218,4 +218,37 @@ class ProfilesTest < ActiveSupport::TestCase
     json = JSON.parse(last_response.body)
     assert_includes json["permissions"], 'allow_post_content'
   end
+  should 'add categories by id to a specific profile' do
+    login_api
+    community = fast_create(Community)
+    community.add_admin(person)
+    community.save
+    community.reload
+    category_1 = fast_create(Category, :environment_id => environment.id)
+    category_2 = fast_create(Category, :environment_id => environment.id)
+    params.merge!({profile: {category_ids: "#{category_1.id},#{category_2.id}"}})
+    post "/api/v1/profiles/#{community.id}/categories/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert json.has_key?("categories")
+    assert_equal json["categories"].length, 2
+    assert_includes json["categories"][0].values, category_1.name
+    assert_includes json["categories"][1].values, category_2.name
+  end
+
+  should 'add categories by name to a specific profile' do
+    login_api
+    community = fast_create(Community)
+    community.add_admin(person)
+    community.save
+    community.reload
+    category_1 = fast_create(Category, :environment_id => environment.id)
+    category_2 = fast_create(Category, :environment_id => environment.id)
+    params.merge!({profile: {category_ids: "#{category_1.name},#{category_2.name}"}})
+    post "/api/v1/profiles/#{community.id}/categories/?#{params.to_query}"
+    json = JSON.parse(last_response.body)
+    assert json.has_key?("categories")
+    assert_equal json["categories"].length, 2
+    assert_includes json["categories"][0].values, category_1.name
+    assert_includes json["categories"][1].values, category_2.name
+  end
 end

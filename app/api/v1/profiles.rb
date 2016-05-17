@@ -11,6 +11,15 @@ module Api
           present profiles, :with => Entities::Profile, :current_person => current_person
         end
 
+        post ':id/categories' do
+          authenticate!
+          profile = Profile.find(params[:id])
+          category_ids = params[:profile].delete :category_ids
+          profile = add_categories_to_asset(profile, category_ids)
+          profile.save
+          present profile, :with => Entities::Profile, :current_person => current_person
+        end
+
         get ':id' do
           profiles = environment.profiles
           profiles = profiles.visible

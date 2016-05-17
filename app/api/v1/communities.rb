@@ -34,12 +34,15 @@ module Api
             params[:community][:custom_values][key]=params[:community].delete(key) if Community.custom_fields(environment).any?{|cf| cf.name==key}
           end
 
+          category_ids = params[:community].delete :category_ids
+
           begin
             community = Community.create_after_moderation(current_person, params[:community].merge({:environment => environment}))
           rescue
             community = Community.new(params[:community])
           end
 
+          community = add_categories_to_asset(community, category_ids)
           if !community.save
             render_api_errors!(community.errors.full_messages)
           end

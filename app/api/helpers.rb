@@ -471,5 +471,32 @@ module Api
       end_period = until_date.nil? ? DateTime.now : until_date
       begin_period..end_period
     end
+
+    def categories_by_ids(ids)
+      return ids.split(',').map(&:to_i) if ids.index(',')
+      [ids.to_i]
+    end
+
+    def categories_by_names(names)
+      return [Category.find_by(name: names).id] unless names.index(',')
+      names.split(',').map{ |name| Category.find_by(name: name ).id}
+    end
+
+    def add_categories_to_asset(asset, categories)
+      return asset unless has_permission_to_add_category?(asset, categories)
+      category_ids = []
+      category_ids = categories.to_i > 0 ? categories_by_ids(categories) : \
+                                           categories_by_names(categories)
+      category_ids.uniq.each do |item|
+        asset.add_category(Category.find(item)) unless item.to_i.zero?
+      end
+      asset
+    end
+
+    def has_permission_to_add_category?(asset, categories)
+      return false if categories.blank?
+      return true if current_person.is_admin?
+      return asset.allow_edit? current_person
+    end
   end
 end
