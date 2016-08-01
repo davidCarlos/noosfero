@@ -455,7 +455,7 @@ module Api
     end
 
     def categories_by_names(names)
-      unless name.index(',')
+      unless names.index(',')
         category = Category.find_by(name: names)
         return [category.id] if category
       end
