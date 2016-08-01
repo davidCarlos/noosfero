@@ -187,28 +187,6 @@ module Api
       present_partial tasks, :with => Entities::Task
     end
 
-    ###########################
-    #        Activities       #
-    ###########################
-    def find_activities(asset, method_or_relation = 'activities')
-
-      not_found! if asset.blank? || asset.secret || !asset.visible
-      forbidden! if !asset.display_private_info_to?(current_person)
-
-      activities = select_filtered_collection_of(asset, method_or_relation, params)
-      activities = activities.map(&:activity)
-      activities
-    end
-
-    def present_activities_for_asset(asset, method_or_relation = 'activities')
-      tasks = find_activities(asset, method_or_relation)
-      present_activities(tasks)
-    end
-
-    def present_activities(activities)
-      present_partial activities, :with => Entities::Activity, :current_person => current_person
-    end
-
     def make_conditions_with_parameter(params = {})
       parsed_params = parser_params(params)
       conditions = {}
@@ -232,7 +210,7 @@ module Api
           order = 'RANDOM()'
         else
           field_name, direction = params[:order].split(' ')
-          assoc_class = extract_associated_classname(object, method_or_relation)
+          assoc_class = extract_associated_classname(method_or_relation)
           if !field_name.blank? and assoc_class
             if assoc_class.attribute_names.include? field_name
               if direction.present? and ['ASC','DESC'].include? direction.upcase
@@ -245,12 +223,12 @@ module Api
       return order
     end
 
-    def make_timestamp_with_parameters_and_method(object, method_or_relation, params)
+    def make_timestamp_with_parameters_and_method(params, method_or_relation)
       timestamp = nil
       if params[:timestamp]
-        datetime = DateTime.parse(params[:timestamp]).utc
-        table_name = extract_associated_tablename(object, method_or_relation)
-        assoc_class = extract_associated_classname(object, method_or_relation)
+        datetime = DateTime.parse(params[:timestamp])
+        table_name = extract_associated_tablename(method_or_relation)
+        assoc_class = extract_associated_classname(method_or_relation)
         date_atrr = assoc_class.attribute_names.include?('updated_at') ? 'updated_at' : 'created_at'
         timestamp = "#{table_name}.#{date_atrr} >= '#{datetime}'"
       end
@@ -280,7 +258,7 @@ module Api
     def select_filtered_collection_of(object, method_or_relation, params)
       conditions = make_conditions_with_parameter(params)
       order = make_order_with_parameters(object,method_or_relation,params)
-      timestamp = make_timestamp_with_parameters_and_method(object, method_or_relation, params)
+      timestamp = make_timestamp_with_parameters_and_method(params, method_or_relation)
 
       objects = is_a_relation?(method_or_relation) ? method_or_relation : object.send(method_or_relation)
       objects = by_reference(objects, params)
@@ -428,22 +406,21 @@ module Api
     end
     private
 
-    def extract_associated_tablename(object, method_or_relation)
-      extract_associated_classname(object, method_or_relation).table_name
+    def extract_associated_tablename(method_or_relation)
+      extract_associated_classname(method_or_relation).table_name
     end
 
-    def extract_associated_classname(object, method_or_relation)
+    def extract_associated_classname(method_or_relation)
       if is_a_relation?(method_or_relation)
         method_or_relation.blank? ? '' : method_or_relation.first.class
       else
-        object.send(method_or_relation).table_name.singularize.camelize.constantize
+        method_or_relation.to_s.singularize.camelize.constantize
       end
     end
 
     def is_a_relation?(method_or_relation)
       method_or_relation.kind_of?(ActiveRecord::Relation)
     end
-  
 
     def parser_params(params)
       parsed_params = {}
@@ -478,8 +455,12 @@ module Api
     end
 
     def categories_by_names(names)
-      return [Category.find_by(name: names).id] unless names.index(',')
-      names.split(',').map{ |name| Category.find_by(name: name ).id}
+      unless name.index(',')
+        category = Category.find_by(name: names)
+        return [category.id] if category
+      end
+
+      names.split(',').map{ |name| Category.find_by(name: name )}.compact.map(&:id)
     end
 
     def add_categories_to_asset(asset, categories)
@@ -488,7 +469,8 @@ module Api
       category_ids = categories.to_i > 0 ? categories_by_ids(categories) : \
                                            categories_by_names(categories)
       category_ids.uniq.each do |item|
-        asset.add_category(Category.find(item)) unless item.to_i.zero?
+        category = Category.find_by(id: item)
+        asset.add_category(category) if category
       end
       asset
     end
